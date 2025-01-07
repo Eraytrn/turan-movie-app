@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
-import { MdOutlineWatchLater } from "react-icons/md";
+import { MdOutlineWatchLater } from 'react-icons/md';
 import { db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { UserAuth } from '../context/AuthContext';
 
-const Movie = ({ item }) => {
+const Card = ({ movie, onClick }) => {
   const [like, setLike] = useState(false);
   const [watchLater, setWatchLater] = useState(false);
   const { user } = UserAuth();
 
-  
   const handleSaveMovie = async (movie, type) => {
     if (!user) {
       alert('Please log in to save movies.');
@@ -24,30 +23,25 @@ const Movie = ({ item }) => {
       const userData = userDoc.data();
       let updatedMovies;
 
-      
       if (type === 'watchLater') {
-        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) { 
+        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) {
           updatedMovies = userData.watchLaterMovies.filter((m) => m.id !== movie.id);
           await updateDoc(userRef, { watchLaterMovies: updatedMovies });
           setWatchLater(false); 
           return;
         } else {
-       
           const watchLaterMovies = userData.watchLaterMovies || [];
           updatedMovies = [...watchLaterMovies, { ...movie, type }];
           await updateDoc(userRef, { watchLaterMovies: updatedMovies });
           setWatchLater(true); 
         }
-      } 
-      else if (type === 'liked') {
+      } else if (type === 'liked') {
         if (userData.likedMovies.some((m) => m.id === movie.id)) {
-       
           updatedMovies = userData.likedMovies.filter((m) => m.id !== movie.id);
           await updateDoc(userRef, { likedMovies: updatedMovies });
           setLike(false); 
           return;
         } else {
-        
           const likedMovies = userData.likedMovies || [];
           updatedMovies = [...likedMovies, { ...movie, type }];
           await updateDoc(userRef, { likedMovies: updatedMovies });
@@ -69,11 +63,11 @@ const Movie = ({ item }) => {
   };
 
   const handleLike = () => {
-    handleSaveMovie(item, 'liked'); 
+    handleSaveMovie(movie, 'liked'); 
   };
 
   const handleWatchLater = () => {
-    handleSaveMovie(item, 'watchLater'); 
+    handleSaveMovie(movie, 'watchLater'); 
   };
 
   useEffect(() => {
@@ -84,11 +78,11 @@ const Movie = ({ item }) => {
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            
-            if (userData.watchLaterMovies && userData.watchLaterMovies.some((m) => m.id === item.id)) {
+
+            if (userData.watchLaterMovies && userData.watchLaterMovies.some((m) => m.id === movie.id)) {
               setWatchLater(true);
             }
-            if (userData.likedMovies && userData.likedMovies.some((m) => m.id === item.id)) {
+            if (userData.likedMovies && userData.likedMovies.some((m) => m.id === movie.id)) {
               setLike(true);
             }
           }
@@ -98,32 +92,31 @@ const Movie = ({ item }) => {
       };
       fetchUserData();
     }
-  }, [user, item.id]);
+  }, [user, movie.id]);
 
   return (
-    <div className="w-[160px] sm:w-[200px] md:w-[240px] inline-block cursor-pointer relative p-2">
-      <img
-        className="w-full h-auto block"
-        src={`https://image.tmdb.org/t/p/w500/${item?.backdrop_path}`}
-        alt={item?.title}
-      />
-      <div className="absolute top-0 left-0 w-full h-full hover:bg-black/80 opacity-0 hover:opacity-100 text-white">
-        <p className="white-space-normal text-xs md:text-sm font-bold flex justify-center items-center h-full text-center">
-          {item?.title}
-        </p>
-        <p>
-          <FaHeart
-            className={`absolute top-4 left-4 text-gray-300 ${like ? 'text-red-600' : ''}`}
-            onClick={handleLike}
-          />
-          <MdOutlineWatchLater 
-            className={`absolute bottom-4 left-4 text-gray-300 ${watchLater ? 'text-red-600' : ''}`}
-            onClick={handleWatchLater}
-          />
-        </p>
-      </div>
+        <div
+    onClick={onClick}
+    className="bg-black rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-transform transform hover:scale-105 relative p-3 max-w-xs" // Increased padding and width
+    >
+    <img
+        src={`https://image.tmdb.org/t/p/w500/${movie.poster_path}`}
+        alt={movie.title || movie.name}
+        className="w-56 h-80 object-cover rounded-t-lg mx-auto" 
+    />
+    <div className="absolute top-2 left-2 flex justify-between w-full px-2">
+        <FaHeart
+        className={`text-gray-300 ${like ? 'text-red-600' : ''}`}
+        onClick={(e) => { e.stopPropagation(); handleLike(); }}
+        />
+        <MdOutlineWatchLater
+        className={`text-gray-300 ${watchLater ? 'text-red-600' : ''}`}
+        onClick={(e) => { e.stopPropagation(); handleWatchLater(); }}
+        />
+    </div>
+    <h3 className="text-center text-sm font-semibold mt-2 text-white truncate">{movie.title || movie.name}</h3>
     </div>
   );
 };
 
-export default Movie;
+export default Card;

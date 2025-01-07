@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserAuth } from '../context/AuthContext';
 import { FaUserCircle } from 'react-icons/fa';
 
@@ -7,7 +7,16 @@ const Navbar = () => {
   const { user, logOut } = UserAuth();
   const [dropdown, setDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery) {
+      navigate(`/search?query=${searchQuery}`);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -30,13 +39,42 @@ const Navbar = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!location.pathname.includes('/search')) {
+      setSearchQuery('');
+    }
+  }, [location]);
+
   return (
-    <div className='flex items-center justify-between p-4 z-[100] w-full absolute'>
+    <div className='flex items-center justify-between p-4 z-[100] w-full bg-black fixed top-0 left-0'>
       <Link to='/'>
         <h1 className='text-red-600 text-4xl font-bold cursor-pointer'>
           NETFLIX
         </h1>
       </Link>
+      
+      <nav className="flex space-x-4">
+        <Link to="/movies" className="text-white">
+          Movie List
+        </Link>
+        <Link to="/tv" className="text-white">
+          TV List
+        </Link>
+      </nav>
+
+      <form onSubmit={handleSearch} className="flex items-center space-x-2">
+        <input
+          type="text"
+          placeholder="Search movies or shows..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="px-4 py-2 rounded-md text-black"
+        />
+        <button type="submit" className="text-white bg-red-600 px-4 py-2 rounded-md cursor-pointer">
+          Search
+        </button>
+      </form>
+
       {user?.email ? (
         <div className="relative">
           <FaUserCircle 
