@@ -23,13 +23,13 @@
     return data;
   };
 
-  export const fetchDetails = async (id) => {
+  export const fetchMovieDetails = async (id) => {
     const response = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=302083967326b88c8620c4f55dadc469`);
     const data = await response.json();
     return data;
   };
   
-  export const fetchVideos = async (id) => {
+  export const fetchMovieVideos = async (id) => {
     const response = await fetch(`https://api.themoviedb.org/3/movie/${id}/videos?api_key=302083967326b88c8620c4f55dadc469`);
     const data = await response.json();
     return data;
@@ -54,5 +54,16 @@
   
   };
 
+
+  export const fetchMovieCredits = async (id) => {
+    const response = await fetch(`https://api.themoviedb.org/3/movie/${id}/credits?api_key=302083967326b88c8620c4f55dadc469`);
+    const data = await response.json();
+    return data;
+  };
   
-  
+
+  export const fetchTVCredits = async (id) => {
+    const response = await fetch(`https://api.themoviedb.org/3/tv/${id}/credits?api_key=302083967326b88c8620c4f55dadc469`);
+    const data = await response.json();
+    return data;
+  };

@@ -94,7 +94,6 @@ const Account = () => {
           </div>
         ) : (
           <div>
-            <h3 className="font-semibold mb-2">Liked Movies</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {likedMovies.map((movie, index) => (
                 <div key={index} className="text-center relative">

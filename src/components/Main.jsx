@@ -8,7 +8,6 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const Main = () => {
   const [movies, setMovies] = useState([]);
-  const [selectedMovie, setSelectedMovie] = useState(null);
   const navigate = useNavigate();
   const { user } = UserAuth();
 
