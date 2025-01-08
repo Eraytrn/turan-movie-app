@@ -5,7 +5,7 @@ import { UserAuth } from '../context/AuthContext';
 const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { user, signUp } = UserAuth();
+  const { signUp } = UserAuth();
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -53,15 +53,10 @@ const Signup = () => {
                   Sign Up
                 </button>
                 <div className='flex justify-between items-center text-sm text-gray-600'>
-                  <p>
-                    <input className='mr-2' type='checkbox' />
-                    Remember me
-                  </p>
-                  <p>Need Help?</p>
                 </div>
                 <p className='py-8'>
                   <span className='text-gray-600'>
-                    Already subscribed to Netflix?
+                    Already subscribed to Turan Movie?
                   </span>{' '}
                   <Link to='/login'>Sign In</Link>
                 </p>

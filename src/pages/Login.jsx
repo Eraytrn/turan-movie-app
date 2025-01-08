@@ -6,7 +6,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('')
-  const { user, logIn } = UserAuth();
+  const { logIn } = UserAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -53,14 +53,9 @@ const Login = () => {
                 Sign In
               </button>
               <div className='flex justify-between items-center text-sm text-gray-600'>
-                <p>
-                  <input className='mr-2' type='checkbox' />
-                  Remember me
-                </p>
-                <p>Need Help?</p>
               </div>
               <p className='py-8'>
-                <span className='text-gray-600'>New to Netflix?</span>{' '}
+                <span className='text-gray-600'>New to Turan Movie?</span>{' '}
                 <Link to='/signup'>Sign Up</Link>
               </p>
             </form>
