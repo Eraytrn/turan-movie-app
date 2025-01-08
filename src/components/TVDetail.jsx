@@ -34,20 +34,34 @@ const TVDetail = () => {
         <p>Loading TV show details...</p>
       ) : (
         <div className="flex flex-col sm:flex-row">
+          {/* Left Section: Poster, User Score, and Action Buttons */}
           <div className="w-full sm:w-1/3">
             <img
               src={`https://image.tmdb.org/t/p/w500${details.poster_path}`}
               alt={details.name}
               className="w-full h-auto rounded-lg"
             />
+            <div className="mt-4 flex justify-between items-center">
+              <span className="text-lg font-semibold">User Score: {details.vote_average}</span>
+              <div className="flex space-x-2">
+                <button className="bg-blue-500 text-white px-4 py-2 rounded">Add to Watchlist</button>
+                <button className="bg-red-500 text-white px-4 py-2 rounded">Liked</button>
+              </div>
+            </div>
           </div>
-          <div className="ml-4 text-white">
+
+          {/* Right Section: TV Details */}
+          <div className="ml-4 text-white flex-1">
             <h1 className="text-3xl font-bold">{details.name}</h1>
             <p className="mt-2 text-lg">{details.overview}</p>
+
+            {/* Genres */}
             <div className="mt-4">
               <span className="font-semibold">Genres: </span>
               {details.genres?.map((genre) => genre.name).join(", ")}
             </div>
+
+            {/* Air Date, Seasons, and Episodes */}
             <div className="mt-2">
               <span className="font-semibold">First Air Date: </span>
               {details.first_air_date}
@@ -60,8 +74,32 @@ const TVDetail = () => {
               <span className="font-semibold">Number of Episodes: </span>
               {details.number_of_episodes}
             </div>
-            {video && <VideoComponent id={video.key} />}
           </div>
+        </div>
+      )}
+
+      {/* Actors Slider */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-white">Cast</h2>
+        <div className="flex overflow-x-scroll space-x-4 mt-4">
+          {details?.credits?.cast?.map((actor) => (
+            <div key={actor.id} className="flex-none w-32">
+              <img
+                src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`}
+                alt={actor.name}
+                className="w-full h-auto rounded-lg"
+              />
+              <p className="text-center text-white mt-2">{actor.name}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* YouTube Trailer */}
+      {video && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-white">Watch Trailer</h2>
+          <VideoComponent id={video.key} />
         </div>
       )}
     </div>

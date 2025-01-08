@@ -37,23 +37,22 @@
 
 
 
-export const fetchTVDetails = async (id) => {
+  export const fetchTVDetails = async (id) => {
 
-    const response = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=302083967326b88c8620c4f55dadc469`);
-    const data = await response.json();
-    return data;
- 
-};
-
-
-export const fetchTVVideos = async (id) => {
- 
-    const response = await fetch(`https://api.themoviedb.org/3/tv/${id}/videos?api_key=302083967326b88c8620c4f55dadc469`);
-    const data = await response.json();
-    return data;
- 
-};
-
+      const response = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=302083967326b88c8620c4f55dadc469`);
+      const data = await response.json();
+      return data;
   
+  };
+
+
+  export const fetchTVVideos = async (id) => {
+  
+      const response = await fetch(`https://api.themoviedb.org/3/tv/${id}/videos?api_key=302083967326b88c8620c4f55dadc469`);
+      const data = await response.json();
+      return data;
+  
+  };
+
   
   

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
 import { MdOutlineWatchLater } from "react-icons/md";
 import { db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';

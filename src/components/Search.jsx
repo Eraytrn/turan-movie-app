@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { searchData } from "../api";
 import Card from "./Card";
 
@@ -21,10 +21,8 @@ const Search = () => {
       searchData(query)
         .then((data) => {
           if (data?.results?.length > 0) {
-            const movieResults = data.results.filter(
-              (item) => item.media_type === "movie"
-            );
-            setSearchResults(movieResults);
+            
+            setSearchResults(data.results);
           } else {
             setSearchResults([]);
           }
@@ -41,8 +39,13 @@ const Search = () => {
     }
   }, [query]);
 
-  const handleMovieClick = (id) => {
-    navigate(`/movie/${id}`);
+  const handleItemClick = (id, mediaType) => {
+    
+    if (mediaType === "movie") {
+      navigate(`/movie/${id}`);
+    } else if (mediaType === "tv") {
+      navigate(`/tv/${id}`);
+    }
   };
 
   const handleSearchSubmit = (e) => {
@@ -63,7 +66,7 @@ const Search = () => {
           className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </form>
-
+  
       <div className="results">
         {loading ? (
           <p className="text-gray-500">Loading...</p>
@@ -72,16 +75,15 @@ const Search = () => {
         ) : searchResults.length === 0 ? (
           <p className="text-gray-500">No results found for "{searchValue}"</p>
         ) : (
-            <div className="mt-20 px-20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3  gap-8">
-            {searchResults.map((movie) => (
+          <div className="mt-20 px-20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {searchResults.map((item) => (
               <Card
-                key={movie.id}
-                movie={movie}
-                onClick={() => handleMovieClick(movie.id)}
+                key={item.id}
+                movie={item}
+                onClick={() => handleItemClick(item.id, item.media_type)} 
               />
             ))}
           </div>
-          
         )}
       </div>
     </div>

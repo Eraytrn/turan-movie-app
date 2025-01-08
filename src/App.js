@@ -25,7 +25,7 @@ function App() {
       <Route path="/signUp" element={<SignUp />} />
       <Route path="/search" element={<Search />} />
       <Route path="/movie/:id" element={<MovieDetails />} />
-      <Route path="/tv/:id" component={<TVDetail />} />
+      <Route path="/tv/:id" element={<TVDetail />} />
       <Route path="/movies" element={<MovieList />} />
       <Route path="/tv" element={<TVList />} />
       <Route 
