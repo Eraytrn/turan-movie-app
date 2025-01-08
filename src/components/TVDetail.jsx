@@ -34,7 +34,7 @@ const TVDetail = () => {
         <p>Loading TV show details...</p>
       ) : (
         <div className="flex flex-col sm:flex-row">
-          {/* Left Section: Poster, User Score, and Action Buttons */}
+         
           <div className="w-full sm:w-1/3">
             <img
               src={`https://image.tmdb.org/t/p/w500${details.poster_path}`}
@@ -50,18 +50,18 @@ const TVDetail = () => {
             </div>
           </div>
 
-          {/* Right Section: TV Details */}
+          
           <div className="ml-4 text-white flex-1">
             <h1 className="text-3xl font-bold">{details.name}</h1>
             <p className="mt-2 text-lg">{details.overview}</p>
 
-            {/* Genres */}
+        
             <div className="mt-4">
               <span className="font-semibold">Genres: </span>
               {details.genres?.map((genre) => genre.name).join(", ")}
             </div>
 
-            {/* Air Date, Seasons, and Episodes */}
+          
             <div className="mt-2">
               <span className="font-semibold">First Air Date: </span>
               {details.first_air_date}
@@ -78,7 +78,7 @@ const TVDetail = () => {
         </div>
       )}
 
-      {/* Actors Slider */}
+      
       <div className="mt-8">
         <h2 className="text-2xl font-bold text-white">Cast</h2>
         <div className="flex overflow-x-scroll space-x-4 mt-4">
@@ -95,7 +95,7 @@ const TVDetail = () => {
         </div>
       </div>
 
-      {/* YouTube Trailer */}
+      
       {video && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold text-white">Watch Trailer</h2>

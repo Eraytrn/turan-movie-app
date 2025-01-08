@@ -4,13 +4,14 @@ import { MdOutlineWatchLater } from "react-icons/md";
 import { db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { UserAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom'; 
 
 const Movie = ({ item }) => {
   const [like, setLike] = useState(false);
   const [watchLater, setWatchLater] = useState(false);
   const { user } = UserAuth();
+  const navigate = useNavigate(); 
 
-  
   const handleSaveMovie = async (movie, type) => {
     if (!user) {
       alert('Please log in to save movies.');
@@ -24,34 +25,29 @@ const Movie = ({ item }) => {
       const userData = userDoc.data();
       let updatedMovies;
 
-      
       if (type === 'watchLater') {
-        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) { 
+        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) {
           updatedMovies = userData.watchLaterMovies.filter((m) => m.id !== movie.id);
           await updateDoc(userRef, { watchLaterMovies: updatedMovies });
-          setWatchLater(false); 
+          setWatchLater(false);
           return;
         } else {
-       
           const watchLaterMovies = userData.watchLaterMovies || [];
           updatedMovies = [...watchLaterMovies, { ...movie, type }];
           await updateDoc(userRef, { watchLaterMovies: updatedMovies });
-          setWatchLater(true); 
+          setWatchLater(true);
         }
-      } 
-      else if (type === 'liked') {
+      } else if (type === 'liked') {
         if (userData.likedMovies.some((m) => m.id === movie.id)) {
-       
           updatedMovies = userData.likedMovies.filter((m) => m.id !== movie.id);
           await updateDoc(userRef, { likedMovies: updatedMovies });
-          setLike(false); 
+          setLike(false);
           return;
         } else {
-        
           const likedMovies = userData.likedMovies || [];
           updatedMovies = [...likedMovies, { ...movie, type }];
           await updateDoc(userRef, { likedMovies: updatedMovies });
-          setLike(true); 
+          setLike(true);
         }
       }
     } else {
@@ -68,12 +64,18 @@ const Movie = ({ item }) => {
     }
   };
 
-  const handleLike = () => {
-    handleSaveMovie(item, 'liked'); 
+  const handleLike = (e) => {
+    e.stopPropagation(); 
+    handleSaveMovie(item, 'liked');
   };
 
-  const handleWatchLater = () => {
-    handleSaveMovie(item, 'watchLater'); 
+  const handleWatchLater = (e) => {
+    e.stopPropagation(); 
+    handleSaveMovie(item, 'watchLater');
+  };
+
+  const handleMovieClick = () => {
+    navigate(`/movie/${item.id}`); 
   };
 
   useEffect(() => {
@@ -84,7 +86,7 @@ const Movie = ({ item }) => {
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            
+
             if (userData.watchLaterMovies && userData.watchLaterMovies.some((m) => m.id === item.id)) {
               setWatchLater(true);
             }
@@ -101,7 +103,7 @@ const Movie = ({ item }) => {
   }, [user, item.id]);
 
   return (
-    <div className="w-[160px] sm:w-[200px] md:w-[240px] inline-block cursor-pointer relative p-2">
+    <div className="w-[160px] sm:w-[200px] md:w-[240px] inline-block cursor-pointer relative p-2" onClick={handleMovieClick}>
       <img
         className="w-full h-auto block"
         src={`https://image.tmdb.org/t/p/w500/${item?.backdrop_path}`}
