@@ -21,6 +21,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await logOut();
+      window.location.reload();
       navigate('/');
     } catch (error) {
       console.log(error);
@@ -85,28 +86,28 @@ const Navbar = () => {
             className="text-white text-4xl cursor-pointer"
           />
           {dropdown && (
-            <div ref={dropdownRef} className="absolute right-0 bg-white text-black p-2 rounded-md shadow-lg">
-              <Link to="/account">
+              <div ref={dropdownRef} className="absolute right-0 bg-white text-black p-2 rounded-md shadow-lg">
+                <Link to="/account">
+                  <button 
+                    onClick={() => setDropdown(false)} 
+                    className="block px-4 py-2 transition-colors duration-300 hover:bg-gray-200 transform hover:scale-105"
+                  >
+                    Account
+                  </button>
+                </Link>
                 <button 
-                  onClick={() => setDropdown(false)} 
-                  className="block px-4 py-2"
+                  onClick={() => {
+                    setDropdown(false);
+                    handleLogout();
+                  }} 
+                  className="block px-4 py-2 transition-colors duration-300 hover:bg-gray-200 transform hover:scale-105"
                 >
-                  Account
+                  Logout
                 </button>
-              </Link>
-              <button 
-                onClick={() => {
-                  setDropdown(false);
-                  handleLogout();
-                }} 
-                className="block px-4 py-2"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
+              </div>
+            )}
+          </div>
+        ) : (
         <div>
           <Link to='/login'>
             <button className='text-white pr-4'>Sign In</button>
