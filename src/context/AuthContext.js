@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { setDoc, doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { generateToken, verifyToken } from '../utils/auth';
+import { generateToken} from '../utils/auth';
 
 const AuthContext = createContext();
 
@@ -26,8 +26,8 @@ export function AuthContextProvider({ children }) {
                 });
             } else {
                 await setDoc(doc(db, 'users', email), {
-                    watchLaterMovies: [],
-                    likedMovies: [],
+                    watchLaterTVMovie: [],
+                    likedTVMovie: [],
                     email: email,
                     createdAt: new Date(),
                     lastLogin: new Date()

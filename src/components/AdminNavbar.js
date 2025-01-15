@@ -21,9 +21,6 @@ const AdminNavbar = () => {
         </h1>
       </Link>
       <div>
-        <Link to='/admin'>
-          <button className='text-white pr-4'>Dashboard</button>
-        </Link>
         <button
           onClick={handleLogout}
           className='bg-white px-6 py-2 rounded cursor-pointer text-red-600'

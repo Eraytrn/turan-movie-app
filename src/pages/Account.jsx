@@ -17,8 +17,8 @@ const Account = () => {
       const userRef = doc(db, 'users', user?.email);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
-        setWatchLaterMovies(userDoc.data().watchLaterMovies || []);
-        setLikedMovies(userDoc.data().likedMovies || []);
+        setWatchLaterMovies(userDoc.data().watchLaterTVMovie || []);
+        setLikedMovies(userDoc.data().likedTVMovie || []);
       }
     };
     if (user?.email) {
@@ -30,20 +30,18 @@ const Account = () => {
     setActiveTab(tab);
   };
 
-  const removeMovieFromList = async (movie, list) => {
+  const removeMovieFromList = async (item, list) => {
     const userRef = doc(db, 'users', user?.email);
     const userDoc = await getDoc(userRef);
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      const updatedList = userData[list].filter((m) => m.id !== movie.id);
-
+      const updatedList = userData[list].filter((m) => m.id !== item.id);
       
       await updateDoc(userRef, {
         [list]: updatedList,
       });
-
       
-      if (list === 'watchLaterMovies') {
+      if (list === 'watchLaterTVMovie') {
         setWatchLaterMovies(updatedList);
       } else {
         setLikedMovies(updatedList);
@@ -66,31 +64,30 @@ const Account = () => {
           onClick={() => handleTabChange('likedMovies')}
           className={`${activeTab === 'likedMovies' ? 'text-red-600 font-bold' : ''}`}
         >
-          Liked Movies
+          Liked 
         </button>
       </div>
 
       <div className="bg-gray-900 p-4 rounded-lg">
         {activeTab === 'watchLater' ? (
           <div>
-            
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {watchLaterMovies.map((movie, index) => (
+              {watchLaterMovies.map((item, index) => (
                 <div key={index} className="text-center relative">
-                   <Link to={`/movie/${movie.id}`}>  
-                  <img
-                    src={`${baseImageUrl}${movie.poster_path}`}
-                    alt={movie.title}
-                    className="rounded-lg mb-2"
-                  />
+                  <Link to={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`}>
+                    <img
+                      src={`${baseImageUrl}${item.poster_path}`}
+                      alt={item.title || item.name}
+                      className="rounded-lg mb-2"
+                    />
                   </Link>
                   <button
-                    onClick={() => removeMovieFromList(movie, 'watchLaterMovies')}
-                    className="absolute top-2 right-2  text-white rounded-full p-1"
+                    onClick={() => removeMovieFromList(item, 'watchLaterTVMovie')}
+                    className="absolute top-2 right-2 text-white rounded-full p-1"
                   >
                     <FaTrashAlt />
                   </button>
-                  <p className="text-gray-300">{movie.title}</p>
+                  <p className="text-gray-300">{item.title || item.name}</p>
                 </div>
               ))}
             </div>
@@ -98,22 +95,22 @@ const Account = () => {
         ) : (
           <div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {likedMovies.map((movie, index) => (
+              {likedMovies.map((item, index) => (
                 <div key={index} className="text-center relative">
-                  <Link to={`/movie/${movie.id}`}>
-                  <img
-                    src={`${baseImageUrl}${movie.poster_path}`}
-                    alt={movie.title}
-                    className="rounded-lg mb-2"
-                  />
+                  <Link to={`/${item.type === 'movie' ? 'movie' : 'tv'}/${item.id}`}>
+                    <img
+                      src={`${baseImageUrl}${item.poster_path}`}
+                      alt={item.title || item.name}
+                      className="rounded-lg mb-2"
+                    />
                   </Link>
                   <button
-                    onClick={() => removeMovieFromList(movie, 'likedMovies')}
+                    onClick={() => removeMovieFromList(item, 'likedTVMovie')}
                     className="absolute top-2 right-2 text-white rounded-full p-1"
                   >
                     <FaTrashAlt />
                   </button>
-                  <p className="text-gray-300">{movie.title}</p>
+                  <p className="text-gray-300">{item.title || item.name}</p>
                 </div>
               ))}
             </div>

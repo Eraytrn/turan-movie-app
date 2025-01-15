@@ -20,40 +20,66 @@ const Movie = ({ item }) => {
 
     const userRef = doc(db, 'users', user.email);
     const userDoc = await getDoc(userRef);
-
+    
     if (userDoc.exists()) {
       const userData = userDoc.data();
       let updatedMovies;
 
       if (type === 'watchLater') {
-        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) {
-          updatedMovies = userData.watchLaterMovies.filter((m) => m.id !== movie.id);
-          await updateDoc(userRef, { watchLaterMovies: updatedMovies });
+        if (userData.watchLaterTVMovie?.some((m) => m.id === movie.id)) {
+          updatedMovies = userData.watchLaterTVMovie.filter((m) => m.id !== movie.id);
+          await updateDoc(userRef, { watchLaterTVMovie: updatedMovies });
           setWatchLater(false);
           return;
         } else {
-          const watchLaterMovies = userData.watchLaterMovies || [];
-          updatedMovies = [...watchLaterMovies, { ...movie, type }];
-          await updateDoc(userRef, { watchLaterMovies: updatedMovies });
+          const watchLaterList = userData.watchLaterTVMovie || [];
+          const movieToAdd = {
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+            type: 'movie'
+          };
+          updatedMovies = [...watchLaterList, movieToAdd];
+          await updateDoc(userRef, { watchLaterTVMovie: updatedMovies });
           setWatchLater(true);
         }
       } else if (type === 'liked') {
-        if (userData.likedMovies.some((m) => m.id === movie.id)) {
-          updatedMovies = userData.likedMovies.filter((m) => m.id !== movie.id);
-          await updateDoc(userRef, { likedMovies: updatedMovies });
+        if (userData.likedTVMovie?.some((m) => m.id === movie.id)) {
+          updatedMovies = userData.likedTVMovie.filter((m) => m.id !== movie.id);
+          await updateDoc(userRef, { likedTVMovie: updatedMovies });
           setLike(false);
           return;
         } else {
-          const likedMovies = userData.likedMovies || [];
-          updatedMovies = [...likedMovies, { ...movie, type }];
-          await updateDoc(userRef, { likedMovies: updatedMovies });
+          const likedList = userData.likedTVMovie || [];
+          const movieToAdd = {
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+            type: 'movie'
+          };
+          updatedMovies = [...likedList, movieToAdd];
+          await updateDoc(userRef, { likedTVMovie: updatedMovies });
           setLike(true);
         }
       }
     } else {
       const newUserMovies = {
-        watchLaterMovies: type === 'watchLater' ? [{ ...movie, type }] : [],
-        likedMovies: type === 'liked' ? [{ ...movie, type }] : [],
+        watchLaterTVMovie: type === 'watchLater' ? [{
+          id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          release_date: movie.release_date,
+          type: 'movie'
+        }] : [],
+        likedTVMovie: type === 'liked' ? [{
+          id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          release_date: movie.release_date,
+          type: 'movie'
+        }] : [],
       };
       await updateDoc(userRef, newUserMovies);
       if (type === 'watchLater') {
@@ -87,10 +113,10 @@ const Movie = ({ item }) => {
           if (userDoc.exists()) {
             const userData = userDoc.data();
 
-            if (userData.watchLaterMovies && userData.watchLaterMovies.some((m) => m.id === item.id)) {
+            if (userData.watchLaterTVMovie?.some((m) => m.id === item.id)) {
               setWatchLater(true);
             }
-            if (userData.likedMovies && userData.likedMovies.some((m) => m.id === item.id)) {
+            if (userData.likedTVMovie?.some((m) => m.id === item.id)) {
               setLike(true);
             }
           }

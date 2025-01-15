@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetchMovieDetails, fetchMovieVideos, fetchMovieCredits } from "../api";
+import { fetchMovieDetails, fetchMovieVideos, fetchMovieCredits, getComments, addComment, updateComment, deleteComment } from "../api";
 import VideoComponent from "./VideoComponent";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase"; 
 import { UserAuth } from "../context/AuthContext"; 
 
@@ -15,8 +15,6 @@ const MovieDetails = () => {
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [editedComment, setEditedComment] = useState("");
-  const [editingIndex, setEditingIndex] = useState(null);
   const [watchLater, setWatchLater] = useState(false);
   const [liked, setLiked] = useState(false);
   const [editingComment, setEditingComment] = useState(null);
@@ -26,19 +24,26 @@ const MovieDetails = () => {
     setLoading(true);
     const fetchData = async () => {
       try {
-        const detailsData = await fetchMovieDetails(id);
-        const videosData = await fetchMovieVideos(id);
-        const creditsData = await fetchMovieCredits(id); 
-  
+        const [detailsData, videosData, creditsData] = await Promise.all([
+          fetchMovieDetails(id),
+          fetchMovieVideos(id),
+          fetchMovieCredits(id)
+        ]);
+
+        if (detailsData.success === false) {
+          throw new Error('Movie not found');
+        }
+
         setDetails(detailsData);
         setCredits(creditsData?.cast || []);
         const trailer = videosData?.results?.find((vid) => vid.type === "Trailer");
         setVideo(trailer);
-  
-        const movieCommentsRef = doc(db, 'movies', id);
-        const movieCommentsDoc = await getDoc(movieCommentsRef);
-        if (movieCommentsDoc.exists()) {
-          setComments(movieCommentsDoc.data().comments || []);
+
+        try {
+          const commentsData = await getComments('movie', id);
+          setComments(commentsData.comments || []);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
         }
 
         if (user) {
@@ -46,55 +51,68 @@ const MovieDetails = () => {
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setWatchLater(userData.watchLaterMovies?.some((m) => m.id === detailsData.id));
-            setLiked(userData.likedMovies?.some((m) => m.id === detailsData.id));
+            setWatchLater(userData.watchLaterTVMovie?.some((m) => m.id === detailsData.id) || false);
+            setLiked(userData.likedTVMovie?.some((m) => m.id === detailsData.id) || false);
           }
         }
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching movie details:', error);
+        setDetails({ error: 'Failed to load movie details' });
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchData();
   }, [id, user]);
 
   const handleAddComment = async () => {
-    if (!newComment) return;
-    if (!user) {
-      alert("Please log in to add a comment.");
-      return;
+    if (!newComment || !user) return;
+    try {
+      const result = await addComment('movie', id, {
+        text: newComment,
+        username: user.email,
+        movieName: details.title,
+        createdAt: new Date().toISOString()
+      });
+
+      if (result && result.id) {
+        setComments([...comments, result]);
+        setNewComment('');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment');
     }
-    const movieCommentsRef = doc(db, 'movies', details.id.toString());
-    const movieCommentsDoc = await getDoc(movieCommentsRef);
-    let updatedComments = [];
-    if (movieCommentsDoc.exists()) {
-      updatedComments = movieCommentsDoc.data().comments || [];
-    }
-    updatedComments.push({ text: newComment, username: user.email, tvSeriesOrMovieName: details.title });
-    await setDoc(movieCommentsRef, { comments: updatedComments }, { merge: true });
-    setComments(updatedComments);
-    setNewComment("");
   };
 
   const handleEditComment = async (comment) => {
-    if (editingComment) {
+    if (editingComment === comment) {
       try {
-        const movieRef = doc(db, 'movies', id);
-        const movieDoc = await getDoc(movieRef);
+        const updatedComment = await updateComment(
+          'movie', 
+          id, 
+          comment.id, 
+          editedText,
+          details.title
+        );
         
-        if (movieDoc.exists()) {
-          const updatedComments = movieDoc.data().comments.map(c => 
-            c.text === editingComment.text ? { ...c, text: editedText } : c
-          );
-          await updateDoc(movieRef, { comments: updatedComments });
-          setComments(updatedComments);
-          setEditingComment(null);
-          setEditedText('');
-        }
+        setComments(comments.map(c => 
+          c.id === comment.id 
+            ? { 
+                ...comment,
+                text: editedText,
+                updatedAt: new Date().toISOString(),
+                movieName: details.title
+              } 
+            : c
+        ));
+        
+        setEditingComment(null);
+        setEditedText('');
       } catch (error) {
         console.error('Error updating comment:', error);
+        alert('Failed to update comment');
       }
     } else {
       setEditingComment(comment);
@@ -102,23 +120,15 @@ const MovieDetails = () => {
     }
   };
 
-  const handleDeleteComment = async (commentToDelete) => {
+  const handleDeleteComment = async (commentId) => {
     try {
-      const movieRef = doc(db, 'movies', id);
-      const movieDoc = await getDoc(movieRef);
-      
-      if (movieDoc.exists()) {
-        const updatedComments = movieDoc.data().comments.filter(
-          comment => comment.text !== commentToDelete.text
-        );
-        await updateDoc(movieRef, { comments: updatedComments });
-        setComments(updatedComments);
-      }
+      await deleteComment('movie', id, commentId);
+      setComments(comments.filter(comment => comment.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);
+      alert('Failed to delete comment');
     }
   };
-  
 
   const handleSaveMovie = async (movie, type) => {
     if (!user) {
@@ -126,47 +136,57 @@ const MovieDetails = () => {
       return;
     }
 
-    const userRef = doc(db, 'users', user.email);
-    const userDoc = await getDoc(userRef);
+    try {
+      const userRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.exists() ? userDoc.data() : { watchLaterTVMovie: [], likedTVMovie: [] };
 
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      let updatedMovies;
+      // Eğer arrays yoksa oluştur
+      if (!userData.watchLaterTVMovie) userData.watchLaterTVMovie = [];
+      if (!userData.likedTVMovie) userData.likedTVMovie = [];
 
       if (type === 'watchLater') {
-        if (userData.watchLaterMovies.some((m) => m.id === movie.id)) {
-          updatedMovies = userData.watchLaterMovies.filter((m) => m.id !== movie.id);
-          await updateDoc(userRef, { watchLaterMovies: updatedMovies });
+        if (userData.watchLaterTVMovie.some((item) => item.id === movie.id)) {
+          // Filmden kaldır
+          const updatedList = userData.watchLaterTVMovie.filter((item) => item.id !== movie.id);
+          await updateDoc(userRef, { watchLaterTVMovie: updatedList });
           setWatchLater(false);
         } else {
-          const watchLaterMovies = userData.watchLaterMovies || [];
-          updatedMovies = [...watchLaterMovies, { ...movie, type }];
-          await updateDoc(userRef, { watchLaterMovies: updatedMovies });
+          // Filme ekle
+          const itemToAdd = {
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+            type: 'movie'
+          };
+          const updatedList = [...userData.watchLaterTVMovie, itemToAdd];
+          await updateDoc(userRef, { watchLaterTVMovie: updatedList });
           setWatchLater(true);
         }
       } else if (type === 'liked') {
-        if (userData.likedMovies.some((m) => m.id === movie.id)) {
-          updatedMovies = userData.likedMovies.filter((m) => m.id !== movie.id);
-          await updateDoc(userRef, { likedMovies: updatedMovies });
+        if (userData.likedTVMovie.some((item) => item.id === movie.id)) {
+          // Filmden kaldır
+          const updatedList = userData.likedTVMovie.filter((item) => item.id !== movie.id);
+          await updateDoc(userRef, { likedTVMovie: updatedList });
           setLiked(false);
         } else {
-          const likedMovies = userData.likedMovies || [];
-          updatedMovies = [...likedMovies, { ...movie, type }];
-          await updateDoc(userRef, { likedMovies: updatedMovies });
+          // Filme ekle
+          const itemToAdd = {
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+            type: 'movie'
+          };
+          const updatedList = [...userData.likedTVMovie, itemToAdd];
+          await updateDoc(userRef, { likedTVMovie: updatedList });
           setLiked(true);
         }
       }
-    } else {
-      const newUserMovies = {
-        watchLaterMovies: type === 'watchLater' ? [{ ...movie, type }] : [],
-        likedMovies: type === 'liked' ? [{ ...movie, type }] : [],
-      };
-      await updateDoc(userRef, newUserMovies);
-      if (type === 'watchLater') {
-        setWatchLater(true);
-      } else {
-        setLiked(true);
-      }
+    } catch (error) {
+      console.error('Error saving movie:', error);
+      alert('Failed to save movie');
     }
   };
 
@@ -257,7 +277,7 @@ const MovieDetails = () => {
                     {editingComment === comment ? 'Save' : 'Edit'}
                   </button>
                   <button
-                    onClick={() => handleDeleteComment(comment)}
+                    onClick={() => handleDeleteComment(comment.id)}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Delete

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetchTVDetails, fetchTVVideos, fetchTVCredits } from "../api";
+import { fetchTVDetails, fetchTVVideos, fetchTVCredits, getComments, addComment, updateComment, deleteComment } from "../api";
 import VideoComponent from "./VideoComponent";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { UserAuth } from "../context/AuthContext";
 
@@ -15,32 +15,35 @@ const TVDetail = () => {
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [editedComment, setEditedComment] = useState("");
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [watchLater, setWatchLater] = useState(false);
-  const [liked, setLiked] = useState(false);
   const [editingComment, setEditingComment] = useState(null);
   const [editedText, setEditedText] = useState('');
+  const [watchLater, setWatchLater] = useState(false);
+  const [liked, setLiked] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     const fetchData = async () => {
-      setLoading(true);
       try {
         const [detailsData, videosData, creditsData] = await Promise.all([
           fetchTVDetails(id),
           fetchTVVideos(id),
-          fetchTVCredits(id),
+          fetchTVCredits(id)
         ]);
+
+        if (detailsData.success === false) {
+          throw new Error('TV Series not found');
+        }
 
         setDetails(detailsData);
         setCredits(creditsData?.cast || []);
         const trailer = videosData?.results?.find((vid) => vid.type === "Trailer");
         setVideo(trailer);
 
-        const tvShowCommentsRef = doc(db, 'tvSeries', id);
-        const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
-        if (tvShowCommentsDoc.exists()) {
-          setComments(tvShowCommentsDoc.data().comments || []);
+        try {
+          const commentsData = await getComments('tv', id);
+          setComments(commentsData.comments || []);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
         }
 
         if (user) {
@@ -48,12 +51,13 @@ const TVDetail = () => {
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setWatchLater(userData.watchLaterMovies?.some((m) => m.id === detailsData.id));
-            setLiked(userData.likedMovies?.some((m) => m.id === detailsData.id));
+            setWatchLater(userData.watchLaterTVMovie?.some((t) => t.id === detailsData.id) || false);
+            setLiked(userData.likedTVMovie?.some((t) => t.id === detailsData.id) || false);
           }
         }
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching TV series details:', error);
+        setDetails({ error: 'Failed to load TV series details' });
       } finally {
         setLoading(false);
       }
@@ -63,47 +67,52 @@ const TVDetail = () => {
   }, [id, user]);
 
   const handleAddComment = async () => {
-    if (!newComment) return;
+    if (!newComment || !user) return;
+    try {
+      const result = await addComment('tv', id, {
+        text: newComment,
+        username: user.email,
+        tvSeriesName: details.name,
+        createdAt: new Date().toISOString()
+      });
 
-    const tvSeriesOrMovieName = details.title || "Unnamed TV Series";
-    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
-    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
-
-    let updatedComments = [];
-
-    if (tvShowCommentsDoc.exists()) {
-      updatedComments = tvShowCommentsDoc.data().comments || [];
+      if (result && result.id) {
+        setComments([...comments, result]);
+        setNewComment('');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment');
     }
-
-    updatedComments.push({
-      text: newComment,
-      username: user.email,
-      tvSeriesOrMovieName: tvSeriesOrMovieName,
-    });
-
-    await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
-
-    setComments(updatedComments);
-    setNewComment("");
   };
 
   const handleEditComment = async (comment) => {
-    if (editingComment) {
+    if (editingComment === comment) {
       try {
-        const tvRef = doc(db, 'tvSeries', id);
-        const tvDoc = await getDoc(tvRef);
+        await updateComment(
+          'tv', 
+          id, 
+          comment.id, 
+          editedText,
+          details.name
+        );
         
-        if (tvDoc.exists()) {
-          const updatedComments = tvDoc.data().comments.map(c => 
-            c.text === editingComment.text ? { ...c, text: editedText } : c
-          );
-          await updateDoc(tvRef, { comments: updatedComments });
-          setComments(updatedComments);
-          setEditingComment(null);
-          setEditedText('');
-        }
+        setComments(comments.map(c => 
+          c.id === comment.id 
+            ? { 
+                ...comment,
+                text: editedText,
+                updatedAt: new Date().toISOString(),
+                tvSeriesName: details.name
+              } 
+            : c
+        ));
+        
+        setEditingComment(null);
+        setEditedText('');
       } catch (error) {
         console.error('Error updating comment:', error);
+        alert('Failed to update comment');
       }
     } else {
       setEditingComment(comment);
@@ -111,20 +120,13 @@ const TVDetail = () => {
     }
   };
 
-  const handleDeleteComment = async (commentToDelete) => {
+  const handleDeleteComment = async (commentId) => {
     try {
-      const tvRef = doc(db, 'tvSeries', id);
-      const tvDoc = await getDoc(tvRef);
-      
-      if (tvDoc.exists()) {
-        const updatedComments = tvDoc.data().comments.filter(
-          comment => comment.text !== commentToDelete.text
-        );
-        await updateDoc(tvRef, { comments: updatedComments });
-        setComments(updatedComments);
-      }
+      await deleteComment('tv', id, commentId);
+      setComments(comments.filter(comment => comment.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);
+      alert('Failed to delete comment');
     }
   };
 
@@ -134,45 +136,57 @@ const TVDetail = () => {
       return;
     }
 
-    const userRef = doc(db, 'users', user.email);
-    const userDoc = await getDoc(userRef);
+    try {
+      const userRef = doc(db, 'users', user.email);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.exists() ? userDoc.data() : { watchLaterTVMovie: [], likedTVMovie: [] };
 
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      let updatedTVSeries;
+      
+      if (!userData.watchLaterTVMovie) userData.watchLaterTVMovie = [];
+      if (!userData.likedTVMovie) userData.likedTVMovie = [];
 
       if (type === 'watchLater') {
-        if (userData.watchLaterMovies.some((m) => m.id === tvSeries.id)) {
-          updatedTVSeries = userData.watchLaterMovies.filter((m) => m.id !== tvSeries.id);
-          await updateDoc(userRef, { watchLaterMovies: updatedTVSeries });
+        if (userData.watchLaterTVMovie.some((item) => item.id === tvSeries.id)) {
+          
+          const updatedList = userData.watchLaterTVMovie.filter((item) => item.id !== tvSeries.id);
+          await updateDoc(userRef, { watchLaterTVMovie: updatedList });
           setWatchLater(false);
         } else {
-          updatedTVSeries = [...userData.watchLaterMovies, { ...tvSeries, type }];
-          await updateDoc(userRef, { watchLaterMovies: updatedTVSeries });
+         
+          const itemToAdd = {
+            id: tvSeries.id,
+            name: tvSeries.name,
+            poster_path: tvSeries.poster_path,
+            first_air_date: tvSeries.first_air_date,
+            type: 'tv'
+          };
+          const updatedList = [...userData.watchLaterTVMovie, itemToAdd];
+          await updateDoc(userRef, { watchLaterTVMovie: updatedList });
           setWatchLater(true);
         }
       } else if (type === 'liked') {
-        if (userData.likedMovies.some((m) => m.id === tvSeries.id)) {
-          updatedTVSeries = userData.likedMovies.filter((m) => m.id !== tvSeries.id);
-          await updateDoc(userRef, { likedMovies: updatedTVSeries });
+        if (userData.likedTVMovie.some((item) => item.id === tvSeries.id)) {
+          
+          const updatedList = userData.likedTVMovie.filter((item) => item.id !== tvSeries.id);
+          await updateDoc(userRef, { likedTVMovie: updatedList });
           setLiked(false);
         } else {
-          updatedTVSeries = [...userData.likedMovies, { ...tvSeries, type }];
-          await updateDoc(userRef, { likedMovies: updatedTVSeries });
+          
+          const itemToAdd = {
+            id: tvSeries.id,
+            name: tvSeries.name,
+            poster_path: tvSeries.poster_path,
+            first_air_date: tvSeries.first_air_date,
+            type: 'tv'
+          };
+          const updatedList = [...userData.likedTVMovie, itemToAdd];
+          await updateDoc(userRef, { likedTVMovie: updatedList });
           setLiked(true);
         }
       }
-    } else {
-      const newUserMovies = {
-        watchLaterMovies: type === 'watchLater' ? [{ ...tvSeries, type }] : [],
-        likedMovies: type === 'liked' ? [{ ...tvSeries, type }] : [],
-      };
-      await updateDoc(userRef, newUserMovies);
-      if (type === 'watchLater') {
-        setWatchLater(true);
-      } else {
-        setLiked(true);
-      }
+    } catch (error) {
+      console.error('Error saving TV series:', error);
+      alert('Failed to save TV series');
     }
   };
 
@@ -186,7 +200,7 @@ const TVDetail = () => {
             {details.poster_path ? (
               <img
                 src={`https://image.tmdb.org/t/p/w500${details.poster_path}`}
-                alt={details.title || "TV Series Poster"}
+                alt={details.name || "TV Series Poster"}
                 className="w-full h-auto rounded-lg"
               />
             ) : (
@@ -195,12 +209,37 @@ const TVDetail = () => {
           </div>
 
           <div className="ml-4 text-white flex-1">
+            <h1 className="text-3xl font-bold">{details.name}</h1>
+            
             <p className="mt-2 text-lg">{details.overview}</p>
 
             <div className="mt-4">
               <span className="font-semibold">Genres: </span>
               {details.genres?.map((genre) => genre.name).join(", ")}
             </div>
+
+            <div className="mt-2">
+              <span className="font-semibold">First Air Date: </span>
+              {details.first_air_date}
+            </div>
+
+            <div className="mt-2">
+              <span className="font-semibold">Number of Seasons: </span>
+              {details.number_of_seasons}
+            </div>
+
+            <div className="mt-2">
+              <span className="font-semibold">Number of Episodes: </span>
+              {details.number_of_episodes}
+            </div>
+
+            {details.episode_run_time?.length > 0 && (
+              <div className="mt-2">
+                <span className="font-semibold">Episode Runtime: </span>
+                {details.episode_run_time[0]} minutes
+              </div>
+            )}
+
 
             <div className="mt-4 flex justify-start items-center space-x-2">
               <button
@@ -228,12 +267,11 @@ const TVDetail = () => {
         </div>
       )}
 
-
       <div className="mt-8">
         <h3 className="text-white text-xl font-bold mb-4">Comments</h3>
         <div className="space-y-4">
-          {comments.map((comment, index) => (
-            <div key={index} className="bg-gray-800 p-4 rounded-lg">
+          {comments.map((comment) => (
+            <div key={comment.id} className="bg-gray-800 p-4 rounded-lg">
               {editingComment === comment ? (
                 <textarea
                   className="w-full p-4 bg-gray-700 text-white rounded-lg resize-y min-h-[100px] break-words"
@@ -257,7 +295,7 @@ const TVDetail = () => {
                     {editingComment === comment ? 'Save' : 'Edit'}
                   </button>
                   <button
-                    onClick={() => handleDeleteComment(comment)}
+                    onClick={() => handleDeleteComment(comment.id)}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Delete
@@ -269,20 +307,22 @@ const TVDetail = () => {
         </div>
       </div>
 
-      <div className="mt-6">
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Write a comment..."
-          className="w-full p-4 bg-gray-700 text-white rounded-lg resize-y min-h-[100px] break-words"
-        />
-        <button
-          onClick={handleAddComment}
-          className="mt-2 bg-red-600 text-white px-4 py-2 rounded"
-        >
-          Post Comment
-        </button>
-      </div>
+      {user && (
+        <div className="mt-6">
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Write a comment..."
+            className="w-full p-4 bg-gray-700 text-white rounded-lg resize-y min-h-[100px] break-words"
+          />
+          <button
+            onClick={handleAddComment}
+            className="mt-2 bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Post Comment
+          </button>
+        </div>
+      )}
 
       <div className="mt-8">
         <h2 className="text-2xl font-bold text-white">Cast</h2>
