@@ -60,7 +60,7 @@ export const fetchMovieVideos = async (id) => {
 
 
 export const fetchTVVideos = async (id) => {
-  const response = await fetch(`${TMDB_BASE_URL}/${id}/videos?api_key=${TMDB_API_KEY}`);
+  const response = await fetch(`${TMDB_BASE_URL}/tv/${id}/videos?api_key=${TMDB_API_KEY}`);
   const data = await response.json();
   return data;
 };

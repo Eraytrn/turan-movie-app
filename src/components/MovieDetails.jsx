@@ -141,18 +141,18 @@ const MovieDetails = () => {
       const userDoc = await getDoc(userRef);
       const userData = userDoc.exists() ? userDoc.data() : { watchLaterTVMovie: [], likedTVMovie: [] };
 
-      // Eğer arrays yoksa oluştur
+      
       if (!userData.watchLaterTVMovie) userData.watchLaterTVMovie = [];
       if (!userData.likedTVMovie) userData.likedTVMovie = [];
 
       if (type === 'watchLater') {
         if (userData.watchLaterTVMovie.some((item) => item.id === movie.id)) {
-          // Filmden kaldır
+          
           const updatedList = userData.watchLaterTVMovie.filter((item) => item.id !== movie.id);
           await updateDoc(userRef, { watchLaterTVMovie: updatedList });
           setWatchLater(false);
         } else {
-          // Filme ekle
+          
           const itemToAdd = {
             id: movie.id,
             title: movie.title,
@@ -166,12 +166,12 @@ const MovieDetails = () => {
         }
       } else if (type === 'liked') {
         if (userData.likedTVMovie.some((item) => item.id === movie.id)) {
-          // Filmden kaldır
+         
           const updatedList = userData.likedTVMovie.filter((item) => item.id !== movie.id);
           await updateDoc(userRef, { likedTVMovie: updatedList });
           setLiked(false);
         } else {
-          // Filme ekle
+          
           const itemToAdd = {
             id: movie.id,
             title: movie.title,
