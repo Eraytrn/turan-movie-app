@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchTVDetails, fetchTVVideos, fetchTVCredits } from "../api";
-import VideoComponent from "./VideoComponent"; 
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase"; 
+import VideoComponent from "./VideoComponent";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import { UserAuth } from "../context/AuthContext";
 
 const TVDetail = () => {
@@ -13,6 +13,10 @@ const TVDetail = () => {
   const [video, setVideo] = useState(null);
   const [credits, setCredits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [editedComment, setEditedComment] = useState("");
+  const [editingIndex, setEditingIndex] = useState(null);
   const [watchLater, setWatchLater] = useState(false);
   const [liked, setLiked] = useState(false);
 
@@ -31,10 +35,15 @@ const TVDetail = () => {
         const trailer = videosData?.results?.find((vid) => vid.type === "Trailer");
         setVideo(trailer);
 
+        const tvShowCommentsRef = doc(db, 'tvSeries', id);
+        const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
+        if (tvShowCommentsDoc.exists()) {
+          setComments(tvShowCommentsDoc.data().comments || []);
+        }
+
         if (user) {
           const userRef = doc(db, 'users', user.email);
           const userDoc = await getDoc(userRef);
-
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setWatchLater(userData.watchLaterMovies?.some((m) => m.id === detailsData.id));
@@ -50,6 +59,63 @@ const TVDetail = () => {
 
     fetchData();
   }, [id, user]);
+
+  const handleAddComment = async () => {
+    if (!newComment) return;
+
+    const tvSeriesOrMovieName = details.title || "Unnamed TV Series";
+    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
+    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
+
+    let updatedComments = [];
+
+    if (tvShowCommentsDoc.exists()) {
+      updatedComments = tvShowCommentsDoc.data().comments || [];
+    }
+
+    updatedComments.push({
+      text: newComment,
+      username: user.email,
+      tvSeriesOrMovieName: tvSeriesOrMovieName,
+    });
+
+    await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
+
+    setComments(updatedComments);
+    setNewComment("");
+  };
+
+  const handleEditComment = (index) => {
+    setEditedComment(comments[index].text);
+    setEditingIndex(index);
+  };
+
+  const handleUpdateComment = async () => {
+    if (!editedComment) return;
+    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
+    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
+    if (tvShowCommentsDoc.exists()) {
+      const tvShowComments = tvShowCommentsDoc.data().comments || [];
+      const updatedComments = tvShowComments.map((comment, index) =>
+        index === editingIndex ? { ...comment, text: editedComment } : comment
+      );
+      await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
+      setComments(updatedComments);
+      setEditedComment("");
+      setEditingIndex(null);
+    }
+  };
+
+  const handleDeleteComment = async (commentIndex) => {
+    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
+    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
+    if (tvShowCommentsDoc.exists()) {
+      const tvShowComments = tvShowCommentsDoc.data().comments || [];
+      const updatedComments = tvShowComments.filter((_, index) => index !== commentIndex);
+      await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
+      setComments(updatedComments);
+    }
+  };
 
   const handleSaveMovie = async (tvSeries, type) => {
     if (!user) {
@@ -86,13 +152,16 @@ const TVDetail = () => {
         }
       }
     } else {
-      const newUserTVSeries = {
+      const newUserMovies = {
         watchLaterMovies: type === 'watchLater' ? [{ ...tvSeries, type }] : [],
         likedMovies: type === 'liked' ? [{ ...tvSeries, type }] : [],
       };
-      await updateDoc(userRef, newUserTVSeries);
-      if (type === 'watchLater') setWatchLater(true);
-      else setLiked(true);
+      await updateDoc(userRef, newUserMovies);
+      if (type === 'watchLater') {
+        setWatchLater(true);
+      } else {
+        setLiked(true);
+      }
     }
   };
 
@@ -147,6 +216,70 @@ const TVDetail = () => {
           </div>
         </div>
       )}
+
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-white">Comments</h2>
+        <div className="mt-4 space-y-4">
+          {comments.map((comment, index) => (
+            <div key={index} className="bg-gray-800 p-4 rounded-lg">
+              {editingIndex === index ? (
+                <div>
+                  <textarea
+                    className="w-full p-2 bg-gray-700 text-white rounded-lg"
+                    value={editedComment}
+                    onChange={(e) => setEditedComment(e.target.value)}
+                  />
+                  <button
+                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                    onClick={handleUpdateComment}
+                  >
+                    Update Comment
+                  </button>
+                </div>
+              ) : (
+                <p className="text-white">{comment.text}</p>
+              )}
+              <div className="mt-2 text-gray-400">
+                <span>{comment.username}</span>
+              </div>
+              {user && comment.username === user.email && (
+                <div className="mt-2 flex space-x-2">
+                  <button
+                    className="text-blue-500"
+                    onClick={() => handleDeleteComment(index)}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    className="text-blue-500"
+                    onClick={() => handleEditComment(index)}
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {user && (
+          <div className="mt-4">
+            <textarea
+              className="w-full p-2 rounded-lg bg-gray-800 text-white"
+              placeholder="Add a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+            <button
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg"
+              onClick={handleAddComment}
+            >
+              Add Comment
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="mt-8">
         <h2 className="text-2xl font-bold text-white">Cast</h2>
