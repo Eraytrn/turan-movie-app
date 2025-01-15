@@ -5,67 +5,87 @@ import { UserAuth } from '../context/AuthContext';
 const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { signUp } = UserAuth();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       await signUp(email, password);
-      navigate('/')
+      
+      if (email.startsWith('admin@')) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.log(error);
+      if (error.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please login instead.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address.');
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else {
+        setError('Failed to create account. Please try again.');
+      }
     }
   };
 
   return (
-    <>
-      <div className='w-full h-screen'>
-        <img
-          className='hidden sm:block absolute w-full h-full object-cover'
-          src='https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'
-          alt='/'
-        />
-        <div className='bg-black/60 fixed top-0 left-0 w-full h-screen'></div>
-        <div className='fixed w-full px-4 py-24 z-50'>
-          <div className='max-w-[450px] h-[600px] mx-auto bg-black/75 text-white'>
-            <div className='max-w-[320px] mx-auto py-16'>
-              <h1 className='text-3xl font-bold'>Sign Up</h1>
-              <form
-                onSubmit={handleSubmit}
-                className='w-full flex flex-col py-4'
-              >
+    <div className='w-full h-screen'>
+      <img
+        className='hidden sm:block absolute w-full h-full object-cover'
+        src={require('../components/loginregisterbackground.jpg')}
+        alt='/'
+      />
+      <div className='fixed top-0 left-0 w-full h-screen'></div>
+      <div className='fixed w-full px-4 py-36 z-50'>
+        <div className='max-w-[450px] mx-auto bg-white rounded-xl shadow-2xl'>
+          <div className='p-8'>
+            <h1 className='text-4xl font-bold text-blue-600 text-center mb-8'>Create An Account</h1>
+            {error && (
+              <div className='bg-red-500/20 border border-red-500 text-red-500 px-4 py-3 rounded mb-6'>
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className='space-y-6'>
+              <div>
+                <label className='text-gray-700 text-sm font-semibold block mb-2'>Email Address</label>
                 <input
                   onChange={(e) => setEmail(e.target.value)}
-                  className='p-3 my-2 bg-gray-700 rounded'
+                  className='w-full px-4 py-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900'
                   type='email'
-                  placeholder='Email'
+                  placeholder='Enter your email'
                   autoComplete='email'
                 />
+              </div>
+              <div>
+                <label className='text-gray-700 text-sm font-semibold block mb-2'>Password</label>
                 <input
                   onChange={(e) => setPassword(e.target.value)}
-                  className='p-3 my-2 bg-gray-700 rounded'
+                  className='w-full px-4 py-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900'
                   type='password'
-                  placeholder='Password'
+                  placeholder='Enter your password'
                   autoComplete='current-password'
                 />
-                <button className='bg-red-600 py-3 my-6 rounded font-bold'>
-                  Sign Up
-                </button>
-                <div className='flex justify-between items-center text-sm text-gray-600'>
-                </div>
-                <p className='py-8'>
-                  <span className='text-gray-600'>
-                    Already subscribed to Turan Movie?
-                  </span>{' '}
-                  <Link to='/login'>Sign In</Link>
-                </p>
-              </form>
-            </div>
+              </div>
+              <button className='w-full bg-blue-600 text-white py-3 rounded-lg font-semibold transition duration-300 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2'>
+                Sign Up
+              </button>
+              <div className='flex items-center justify-center space-x-2 mt-6'>
+                <span className='text-gray-600'>Already have an account?</span>
+                <Link to='/login' className='text-blue-600 hover:text-blue-500 font-semibold'>
+                  Sign In
+                </Link>
+              </div>
+            </form>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

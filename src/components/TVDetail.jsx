@@ -19,6 +19,8 @@ const TVDetail = () => {
   const [editingIndex, setEditingIndex] = useState(null);
   const [watchLater, setWatchLater] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [editingComment, setEditingComment] = useState(null);
+  const [editedText, setEditedText] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,35 +87,44 @@ const TVDetail = () => {
     setNewComment("");
   };
 
-  const handleEditComment = (index) => {
-    setEditedComment(comments[index].text);
-    setEditingIndex(index);
-  };
-
-  const handleUpdateComment = async () => {
-    if (!editedComment) return;
-    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
-    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
-    if (tvShowCommentsDoc.exists()) {
-      const tvShowComments = tvShowCommentsDoc.data().comments || [];
-      const updatedComments = tvShowComments.map((comment, index) =>
-        index === editingIndex ? { ...comment, text: editedComment } : comment
-      );
-      await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
-      setComments(updatedComments);
-      setEditedComment("");
-      setEditingIndex(null);
+  const handleEditComment = async (comment) => {
+    if (editingComment) {
+      try {
+        const tvRef = doc(db, 'tvSeries', id);
+        const tvDoc = await getDoc(tvRef);
+        
+        if (tvDoc.exists()) {
+          const updatedComments = tvDoc.data().comments.map(c => 
+            c.text === editingComment.text ? { ...c, text: editedText } : c
+          );
+          await updateDoc(tvRef, { comments: updatedComments });
+          setComments(updatedComments);
+          setEditingComment(null);
+          setEditedText('');
+        }
+      } catch (error) {
+        console.error('Error updating comment:', error);
+      }
+    } else {
+      setEditingComment(comment);
+      setEditedText(comment.text);
     }
   };
 
-  const handleDeleteComment = async (commentIndex) => {
-    const tvShowCommentsRef = doc(db, 'tvSeries', details.id.toString());
-    const tvShowCommentsDoc = await getDoc(tvShowCommentsRef);
-    if (tvShowCommentsDoc.exists()) {
-      const tvShowComments = tvShowCommentsDoc.data().comments || [];
-      const updatedComments = tvShowComments.filter((_, index) => index !== commentIndex);
-      await setDoc(tvShowCommentsRef, { comments: updatedComments }, { merge: true });
-      setComments(updatedComments);
+  const handleDeleteComment = async (commentToDelete) => {
+    try {
+      const tvRef = doc(db, 'tvSeries', id);
+      const tvDoc = await getDoc(tvRef);
+      
+      if (tvDoc.exists()) {
+        const updatedComments = tvDoc.data().comments.filter(
+          comment => comment.text !== commentToDelete.text
+        );
+        await updateDoc(tvRef, { comments: updatedComments });
+        setComments(updatedComments);
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
     }
   };
 
@@ -219,66 +230,58 @@ const TVDetail = () => {
 
 
       <div className="mt-8">
-        <h2 className="text-2xl font-bold text-white">Comments</h2>
-        <div className="mt-4 space-y-4">
+        <h3 className="text-white text-xl font-bold mb-4">Comments</h3>
+        <div className="space-y-4">
           {comments.map((comment, index) => (
             <div key={index} className="bg-gray-800 p-4 rounded-lg">
-              {editingIndex === index ? (
-                <div>
-                  <textarea
-                    className="w-full p-2 bg-gray-700 text-white rounded-lg"
-                    value={editedComment}
-                    onChange={(e) => setEditedComment(e.target.value)}
-                  />
-                  <button
-                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                    onClick={handleUpdateComment}
-                  >
-                    Update Comment
-                  </button>
-                </div>
+              {editingComment === comment ? (
+                <textarea
+                  className="w-full p-4 bg-gray-700 text-white rounded-lg resize-y min-h-[100px] break-words"
+                  value={editedText}
+                  onChange={(e) => setEditedText(e.target.value)}
+                />
               ) : (
-                <p className="text-white">{comment.text}</p>
+                <p className="text-white whitespace-pre-wrap break-words">
+                  {comment.text}
+                </p>
               )}
-              <div className="mt-2 text-gray-400">
-                <span>{comment.username}</span>
-              </div>
-              {user && comment.username === user.email && (
-                <div className="mt-2 flex space-x-2">
+              <p className="text-gray-400 text-sm mt-2">
+                Posted by: {comment.username}
+              </p>
+              {user && user.email === comment.username && (
+                <div className="mt-2 space-x-2">
                   <button
-                    className="text-blue-500"
-                    onClick={() => handleDeleteComment(index)}
+                    onClick={() => handleEditComment(comment)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    {editingComment === comment ? 'Save' : 'Edit'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteComment(comment)}
+                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                   >
                     Delete
-                  </button>
-                  <button
-                    className="text-blue-500"
-                    onClick={() => handleEditComment(index)}
-                  >
-                    Edit
                   </button>
                 </div>
               )}
             </div>
           ))}
         </div>
+      </div>
 
-        {user && (
-          <div className="mt-4">
-            <textarea
-              className="w-full p-2 rounded-lg bg-gray-800 text-white"
-              placeholder="Add a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <button
-              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg"
-              onClick={handleAddComment}
-            >
-              Add Comment
-            </button>
-          </div>
-        )}
+      <div className="mt-6">
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write a comment..."
+          className="w-full p-4 bg-gray-700 text-white rounded-lg resize-y min-h-[100px] break-words"
+        />
+        <button
+          onClick={handleAddComment}
+          className="mt-2 bg-red-600 text-white px-4 py-2 rounded"
+        >
+          Post Comment
+        </button>
       </div>
 
       <div className="mt-8">
