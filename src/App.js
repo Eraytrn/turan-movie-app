@@ -16,7 +16,7 @@ import AdminPanel from "./components/AdminPanel";
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// Ana uygulama içeriğini ayrı bir bileşen olarak oluşturalım
+
 const AppContent = () => {
   const { isAdmin } = UserAuth();
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const AppContent = () => {
   );
 };
 
-// Ana App bileşeni
+
 function App() {
   return (
     <AuthContextProvider>
