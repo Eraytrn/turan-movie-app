@@ -4,9 +4,10 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Available Scripts
 
-In the project directory, you can run:
+After cloning the repository, in the project directory you'll need to run npm install or yarn install command to add node modules into the project.
+Then, you can run:
 
-### `yarn start`
+### `yarn start or npm start` 
 
 Runs the app in the development mode.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
