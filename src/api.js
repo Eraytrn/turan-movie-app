@@ -3,7 +3,7 @@ import { auth } from './firebase';
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-const FIREBASE_DB_URL = process.env.REACT_FIREBASE_DB_URL;
+const FIREBASE_DB_URL = 'https://react-movie-app-f7ce1-default-rtdb.europe-west1.firebasedatabase.app/';
 
 const getFirebaseToken = async () => {
   const user = auth.currentUser;
