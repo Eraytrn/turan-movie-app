@@ -10,7 +10,7 @@ const MovieList = () => {
     const fetchMovies = async () => {
       const response = await axios.get('https://api.themoviedb.org/3/movie/popular', {
         params: {
-          api_key: '302083967326b88c8620c4f55dadc469',
+          api_key: process.env.REACT_APP_TMDB_API_KEY,
           page: currentPage,
         },
       });
